@@ -22,14 +22,21 @@ Param (
 )
 
 #$debugPreference = "Continue"
+
 if ($backup.isPresent){
     $homepath = pwd
     $asperaetc = "C:\Program Files (x86)\Aspera\Enterprise Server\etc"  
     $bundlepath =   "c:\Windows\Temp\$bundle" + ".tar"
     $BackupList = "aspera.conf,passwd,ui.conf,sync-conf.xml,docroot,group"   
     Set-Location $asperaetc|out-null
-    get-childitem * -inc aspera.conf,passwd,ui.conf,sync-conf.xml,docroot,group|
-#    get-childitem * -inc $backupList | 
+    get-childitem * -inc `
+        aspera.conf,
+        passwd,
+        ui.conf,
+        sync-conf.xml,
+        docroot,
+        group   |
+ 
     write-tar -output $bundlepath | out-null
     Set-location $homepath |out-null
 }elseif( $restore.isPresent){
