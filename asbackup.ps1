@@ -17,26 +17,20 @@ Param (
     [switch]$backup,
     [switch]$restore,
     [switch]$noprivdata,
-#    [Parameter(Mandatory=$True)]
     [string[]]$bundle
 )
-
+Import-Module Pscx       #Use the PowerShell Community Extensions
 #$debugPreference = "Continue"
 
 if ($backup.isPresent){
     $homepath = pwd
-    $asperaetc = "C:\Program Files (x86)\Aspera\Enterprise Server\etc"  
+    $asperaetc = "C:\Program Files (x86)\Aspera\Enterprise Server\etc"
+	$asperaetcfiles = $asperaetc + "\*"
     $bundlepath =   "c:\Windows\Temp\$bundle" + ".tar"
-    $BackupList = "aspera.conf,passwd,ui.conf,sync-conf.xml,docroot,group"   
+    $BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
+				  "docroot","group"   
     Set-Location $asperaetc|out-null
-    get-childitem * -inc `
-        aspera.conf,
-        passwd,
-        ui.conf,
-        sync-conf.xml,
-        docroot,
-        group   |
- 
+    get-childitem $asperaetcfiles -force -inc $BackupList |
     write-tar -output $bundlepath | out-null
     Set-location $homepath |out-null
 }elseif( $restore.isPresent){
