@@ -42,7 +42,7 @@ if ($backup.isPresent){
 	
 	# Create a manifet file and append it to the zip archive
 	New-Item -Path $bundlepath -Name $manifestfile -type "file" `
-	    -Value "bundlepath:$bundlepath"
+	    -Value "aspera_etc:$asperaetc `nbundlepath$bundlepath"
 	Write-Zip -Path ($bundlepath + $manifestfile) -Append `
 	    -OutputPath $bundlefile 
 		
