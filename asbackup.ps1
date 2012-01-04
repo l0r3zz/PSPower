@@ -49,6 +49,14 @@ if ($backup.isPresent){
 	# Remove the manifest file
 	Remove-Item -Path ($bundlepath + $manifestfile) |out-null
 	
+	# gather the user data from /etc/passwd
+	$UserData = Get-Content passwd |foreach {
+		$e=@{}
+		$e.name,$e.unused1,[int]$e.uid,[int]$e.gid,$e.fullname,$e.adid,$e.uuid,
+		    $e.homedir,$e.shell = $_ -split '[:,]'
+		$e
+	}
+	
 	# CD back to where you started
     Set-location $homepath |out-null
 	
