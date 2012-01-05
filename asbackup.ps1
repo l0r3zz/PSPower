@@ -61,25 +61,32 @@ function Get-Profiles
 		$profiles=$null
 		# Get the userprofile list and then filter out the built-in accounts
 		if ($computer) {
-			$profiles = Get-WmiObject win32_userprofile -computerName $computer | ?{$_.SID -like "s-1-5-21*"}
-			if (!$?) { Write-Warning "Unable to communicate with - $computer"; continue }
+			$profiles = Get-WmiObject win32_userprofile -computerName $computer|
+			    ?{$_.SID -like "s-1-5-21*"}
+			if (!$?) { Write-Warning "Unable to communicate with - $computer"; 
+			continue }
 		}
-		else { Write-Warning "Unable to communicate with specified host."; continue }
+		else { Write-Warning "Unable to communicate with specified host."; 
+		continue }
 		
-		if($profiles.count -gt 0 -or ($profiles -and ($profiles.GetType()).Name -eq "ManagementObject")) {
+		if($profiles.count -gt 0 -or ($profiles -and 
+		    ($profiles.GetType()).Name -eq "ManagementObject")) {
 			# Loop through the list of profiles
 			foreach ($profile in $profiles) {
-				Write-Verbose ("Reading profile for SID " + $profile.SID + " on $computer")
+				Write-Verbose ("Reading profile for SID " + $profile.SID + 
+				    " on $computer")
 				$user = $null
 				$objUser = $null
 				#Create output objects
 				$Output = New-Object PSObject
 				# create a new secuity identifier object
 				$ObjSID = New-Object System.Security.Principal.SecurityIdentifier($profile.SID)
-				# Try to link the user SID to an actual user object (can fail for local accounts on remote machines, 
+				# Try to link the user SID to an actual user object 
+				# (can fail for local accounts on remote machines, 
 				#  or the user no long exists but the profile still remains)
 				Try { 
-					$objUser = $objSID.Translate([System.Security.Principal.NTAccount]) 
+					$objUser = $objSID.Translate(
+					    [System.Security.Principal.NTAccount]) 
 				}
 				catch { 
 					$user = "ERROR: Not Readable"
@@ -118,23 +125,24 @@ if ($backup.isPresent){
 	$asperaetcfiles = $asperaetc + "\*"
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
-				  
+	
+	Set-Location $bundlepath |Out-Null
+	# Create a manifet file and initiate  the zip archive
+	New-Item -Name $manifestfile -type "file" `
+	    -Value "aspera_etc:$asperaetc `nbundlepath$bundlepath" |Out-Null
+	Get-ChildItem  $manifestfile | Write-Zip -OutputPath $bundlefile | out-null 
+	# Remove the manifest file
+	Remove-Item -Path ($bundlepath + $manifestfile) |out-null
+	
 	# CD over to the aspera /etc directory
     Set-Location $asperaetc|out-null
 	
 	# Get the list of context files and write them to a zip archive
-    get-childitem $asperaetcfiles -force -inc $BackupList |
-    write-Zip -output $bundlefile | out-null
-	
-	# Create a manifet file and append it to the zip archive
-	New-Item -Path $bundlepath -Name $manifestfile -type "file" `
-	    -Value "aspera_etc:$asperaetc `nbundlepath$bundlepath" |Out-Null 
-	Write-Zip -Path ($bundlepath + $manifestfile) -Append `
-	    -OutputPath $bundlefile 
+    #get-childitem $asperaetcfiles -force -inc $BackupList |
+    #write-Zip -Append  -output $bundlefile | out-null
+	foreach ($f in dir $BackupList) { 
+	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile }
 		
-	# Remove the manifest file
-	Remove-Item -Path ($bundlepath + $manifestfile) |out-null
-	
 	# gather the user data from /etc/passwd
 	$UserData = Get-Content passwd |foreach {
 		$e=@{}
