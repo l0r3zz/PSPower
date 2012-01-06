@@ -129,7 +129,7 @@ if ($backup.isPresent){
 	Set-Location $bundlepath |Out-Null
 	# Create a manifet file and initiate  the zip archive
 	New-Item -Name $manifestfile -type "file" `
-	    -Value "aspera_etc:$asperaetc `nbundlepath$bundlepath" |Out-Null
+	    -Value "aspera_etc=$asperaetc `nbundlepath=$bundlepath" |Out-Null
 	Get-ChildItem  $manifestfile | Write-Zip -OutputPath $bundlefile | out-null 
 	# Remove the manifest file
 	Remove-Item -Path ($bundlepath + $manifestfile) |out-null
@@ -158,8 +158,16 @@ if ($backup.isPresent){
 # Perform Restore Operation
 }elseif( $restore.isPresent){
 	$bundlefile = $bundle
+	# Retrieve the manifest file containing the Metadata
 	Read-Archive -Path $bundlefile |Where-Object { $_.name -like $manifestfile}`
-	| Expand-Archive -PassThru 
+	| Expand-Archive -PassThru | out-null #| foreach {Get-Content $_.fullname}
+	# Parse the Metadata into a hash table based on keys in the manifiest file
+	$ArchiveMetaData = @{}
+	get-Content $manifestfile | foreach {
+	    $key,$value = $_ -split '='
+		$ArchiveMetaData.$key = $value
+	}
+	Remove-Item -Path $manifestfile |out-null
     Write-Host "Not implemented"
 	
 }else{
