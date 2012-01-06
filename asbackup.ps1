@@ -115,7 +115,7 @@ Import-Module Pscx       #Use the PowerShell Community Extensions
 # Variables used by both the backup and the restore function
 $manifestfile = ".asmanifest.txt"
 $BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
-              "docroot","group"
+              "docroot","group", "preferences.db"
 			  
 # Perform Backup Operation				  
 if ($backup.isPresent){
@@ -137,12 +137,18 @@ if ($backup.isPresent){
 	# CD over to the aspera /etc directory
     Set-Location $asperaetc|out-null
 	
+	# Stop the asperacentral process so that we can backup preferences.db
+	Stop-service asperacentral 
+	
 	# Get the list of context files and write them to a zip archive
     #get-childitem $asperaetcfiles -force -inc $BackupList |
     #write-Zip -Append  -output $bundlefile | out-null
 	foreach ($f in dir $BackupList) { 
 	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile }
 		
+	# Start asperacentral back up
+	Start-Service asperacentral
+	
 	# gather the user data from /etc/passwd
 	$UserData = Get-Content passwd |foreach {
 		$e=@{}
