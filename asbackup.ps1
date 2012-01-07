@@ -22,6 +22,12 @@ Param (
 # =============================================================================
 # FUNCTION LISTINGS
 # =============================================================================
+function Count-Object {
+	begin { $count =0 }
+	process { $count +=1 }
+	end { $count }
+}
+
 function Get-Profiles
 {   
 	<#
@@ -174,7 +180,22 @@ if ($backup.isPresent){
 		$ArchiveMetaData.$key = $value
 	}
 	Remove-Item -Path $manifestfile |out-null
-    Write-Host "Not implemented"
+	
+	# Stop asperacentral
+	Stop-Service asperacentral 
+	
+	# Retrieve and instantiate the contents of /etc
+	# Note we have to do this kluge because of a bug in the Expand-Archive 
+	# Commandlet that has a broken -EntryPath switch 
+	$NumberOfFiles = Expand-Archive -Path $bundlefile -PassThru | Count-Object
+	$IndexRange = 1..$numberOfFiles
+	Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
+	    $archiveMetaData.bundlepath 
+		
+	# turn on asperacentral
+	Start-service asperacentral
+	
+    Write-Host "Writing restore to $ArchiveMetaData.bundlepath for debugging"
 	
 }else{
     Write-Host "Usage: asbackup -backup [-noprivdata] | -restore <bundle>"
