@@ -189,13 +189,14 @@ if ($backup.isPresent){
 	# Commandlet that has a broken -EntryPath switch 
 	$NumberOfFiles = Expand-Archive -Path $bundlefile -PassThru | Count-Object
 	$IndexRange = 1..$numberOfFiles
+	$bundlepath = $ArchiveMetaData.bundlepath 
 	Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
-	    $archiveMetaData.bundlepath 
+	    $bundlepath 
 		
 	# turn on asperacentral
 	Start-service asperacentral
 	
-    Write-Host "Writing restore to $ArchiveMetaData.bundlepath for debugging"
+    Write-Host "Writing restore to $bundlepath  for debugging"
 	
 }else{
     Write-Host "Usage: asbackup -backup [-noprivdata] | -restore <bundle>"
