@@ -7,6 +7,19 @@
 # Created: [12/26/2011]
 # Author: Geoff White
 # Arguments:
+# Usage: ascbkup   --backup [--no-priv-data] | --restore    <bundle>
+#
+#        <bundle>       is some form of archive file that contains/will contain 
+#                       full user data from the source Server
+#
+#        --backup       Backup all the configuration and user credential data to
+#                       <bundle>
+#
+#        --restore      Restore all configuration and user credential data from
+#                       <bundle> to the destination Server
+#
+#        --no-priv-data Do not back up (or restore) sensitive  user data  
+#                       (such as ssh private keys)  if present
 # =============================================================================
 # Purpose: Backup or Migrate an Enterprise Server Instance to another Machine
 #
@@ -22,12 +35,20 @@ Param (
 # =============================================================================
 # FUNCTION LISTINGS
 # =============================================================================
+
+# *****************************************************************************
+# Count-Object - return the number of object passed on the input stream
+# *****************************************************************************
+
 function Count-Object {
 	begin { $count =0 }
 	process { $count +=1 }
 	end { $count }
 }
 
+# *****************************************************************************
+# Get-Profiles - Gets a list of user profiles on a computer.
+# *****************************************************************************
 function Get-Profiles
 {   
 	<#
@@ -116,18 +137,24 @@ function Get-Profiles
 
 
 Import-Module Pscx       #Use the PowerShell Community Extensions
-#$debugPreference = "Continue"
+
 
 # Variables used by both the backup and the restore function
 $manifestfile = ".asmanifest.txt"
 $BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
               "docroot","group", "preferences.db"
 			  
+#Find the install directory for the aspera products
+$InstallDir = (Get-ChildItem -Path `
+    "Microsoft.PowerShell.Core\Registry::HKEY_CURRENT_USER\Software\Aspera\"`
+	|ForEach-Object {Get-Childitem  $_.pspath `
+	}|ForEach-Object {Get-ItemProperty $_.pspath}).InstallDir
+			  
 # Perform Backup Operation				  
 if ($backup.isPresent){
 	# Some initisl variables 
     $homepath = pwd
-    $asperaetc = "C:\Program Files (x86)\Aspera\Enterprise Server\etc"
+    $asperaetc = $InstallDir+"etc"
 	$asperaetcfiles = $asperaetc + "\*"
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
@@ -147,8 +174,6 @@ if ($backup.isPresent){
 	Stop-service asperacentral 
 	
 	# Get the list of context files and write them to a zip archive
-    #get-childitem $asperaetcfiles -force -inc $BackupList |
-    #write-Zip -Append  -output $bundlefile | out-null
 	foreach ($f in dir $BackupList) { 
 	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile }
 		
@@ -170,9 +195,11 @@ if ($backup.isPresent){
 # Perform Restore Operation
 }elseif( $restore.isPresent){
 	$bundlefile = $bundle
+	
 	# Retrieve the manifest file containing the Metadata
 	Read-Archive -Path $bundlefile |Where-Object { $_.name -like $manifestfile}`
-	| Expand-Archive -PassThru | out-null #| foreach {Get-Content $_.fullname}
+	| Expand-Archive -PassThru | out-null
+	
 	# Parse the Metadata into a hash table based on keys in the manifiest file
 	$ArchiveMetaData = @{}
 	get-Content $manifestfile | foreach {
