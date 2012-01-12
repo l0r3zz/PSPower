@@ -20,6 +20,8 @@
 #
 #        --no-priv-data Do not back up (or restore) sensitive  user data  
 #                       (such as ssh private keys)  if present
+#        --silent       Perform ootentially disruptive actions without prompting
+#                        user for input.
 # =============================================================================
 # Purpose: Backup or Migrate an Enterprise Server Instance to another Machine
 #
@@ -30,6 +32,7 @@ Param (
     [switch]$backup,
     [switch]$restore,
     [switch]$noprivdata,
+	[switch]$silent,
     [string[]]$bundle
 )
 # =============================================================================
@@ -159,6 +162,8 @@ if ($backup.isPresent){
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
 	
+	trap { cd $homepath;Write-Output "Aborting.`n"; exit }
+	
 	Set-Location $bundlepath |Out-Null
 	# Create a manifet file and initiate  the zip archive
 	New-Item -Name $manifestfile -type "file" `
@@ -170,6 +175,14 @@ if ($backup.isPresent){
 	# CD over to the aspera /etc directory
     Set-Location $asperaetc|out-null
 	
+	# Stopping asperacentral can abort transfers that are taking place, prompt
+	# user before proceeding.
+	if (-not $silent.isPresent) {
+	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
+		# Abort if user types anything except return
+		if ($ans ) {throw "Aborting Operation" }
+	}
+		
 	# Stop the asperacentral process so that we can backup preferences.db
 	Stop-service asperacentral 
 	
