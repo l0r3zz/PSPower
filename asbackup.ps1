@@ -84,9 +84,9 @@ function Get-Profiles
 	process {
 		$ErrorActionPreference = "SilentlyContinue"
 		# Check for pipe input
-		if ($_.Name) { $computer = $_.Name | Test-Host -TCPPort 135 }
-		elseif ($_) { $computer = $_ | Test-Host -TCPPort 135 }
-		else { $computer = Test-Host -TCPPort 135 $computer }
+		#if ($_.Name) { $computer = $_.Name | Test-Host -TCPPort 135 }
+		#elseif ($_) { $computer = $_ | Test-Host -TCPPort 135 }
+		#else { $computer = Test-Host -TCPPort 135 $computer }
 
 		$profiles=$null
 		# Get the userprofile list and then filter out the built-in accounts
@@ -162,10 +162,10 @@ if ($backup.isPresent){
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
 	
-	trap { cd $homepath;Write-Output "Aborting.`n"; exit }
+	trap [System.Management.Automation.ActionPreferenceStopException] { cd $homepath;Write-Output "Aborting.`n"; exit }
 	
 	Set-Location $bundlepath |Out-Null
-	# Create a manifet file and initiate  the zip archive
+	# Create a manifest file and initiate  the zip archive
 	New-Item -Name $manifestfile -type "file" `
 	    -Value "aspera_etc=$asperaetc `nbundlepath=$bundlepath" |Out-Null
 	Get-ChildItem  $manifestfile | Write-Zip -OutputPath $bundlefile | out-null 
@@ -180,7 +180,7 @@ if ($backup.isPresent){
 	if (-not $silent.isPresent) {
 	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
 		# Abort if user types anything except return
-		if ($ans ) {throw "Aborting Operation" }
+		if ($ans ) {throw (New-Object System.Management.Automation.ActionPreferenceStopException) }
 	}
 		
 	# Stop the asperacentral process so that we can backup preferences.db
@@ -199,6 +199,17 @@ if ($backup.isPresent){
 		$e.name,$e.unused1,[int]$e.uid,[int]$e.gid,$e.fullname,$e.adid,$e.uuid,
 		    $e.homedir,$e.shell = $_ -split '[:,]'
 		$e
+	}
+	$UserMap = @{}
+	# Build a hash of names in the /etc file
+	foreach ($u in $UserData ) { $UserMap.($u.name) = 1 }
+	# See if there are any user profiles that match the names in the passwd file
+	$UserProfiles = Get-Profiles | foreach {if ($userMap.($_.Username)) 
+	    {$_.Username}}
+	if ( $UserProfiles) {
+		Write-Host "User Profiles are present"
+	} else {
+		Write-Host "No User Profiles are present"
 	}
 	
 	# CD back to where you started
@@ -239,5 +250,6 @@ if ($backup.isPresent){
     Write-Host "Writing restore to $bundlepath  for debugging"
 	
 }else{
-    Write-Host "Usage: asbackup -backup [-noprivdata] | -restore <bundle>"
+    Write-Host "Usage:
+	   asbackup -silent |-backup [-noprivdata] | -restore <bundle>"
 }
