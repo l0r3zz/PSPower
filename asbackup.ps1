@@ -59,7 +59,8 @@ function Get-Profiles
 		Gets a list of user profiles on a computer.
 	
 		.Description
-		This command gets a list of user profiles on a computer. The info is pipable and can be used to do other useful tasks.
+		This command gets a list of user profiles on a computer. 
+		The info is pipable and can be used to do other useful tasks.
 		
 		.Parameter computer
 		The computer on which you wish to recieve profiles. (defaults to localhost)
@@ -110,7 +111,8 @@ function Get-Profiles
 				#Create output objects
 				$Output = New-Object PSObject
 				# create a new secuity identifier object
-				$ObjSID = New-Object System.Security.Principal.SecurityIdentifier($profile.SID)
+				$ObjSID = New-Object `
+				    System.Security.Principal.SecurityIdentifier($profile.SID)
 				# Try to link the user SID to an actual user object 
 				# (can fail for local accounts on remote machines, 
 				#  or the user no long exists but the profile still remains)
@@ -145,7 +147,7 @@ Import-Module Pscx       #Use the PowerShell Community Extensions
 # Variables used by both the backup and the restore function
 $manifestfile = ".asmanifest.txt"
 $BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
-              "docroot","group", "preferences.db"
+              "docroot","group", "preferences.db", "foo"
 			  
 #Find the install directory for the aspera products
 $InstallDir = (Get-ChildItem -Path `
@@ -162,7 +164,8 @@ if ($backup.isPresent){
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
 	
-	trap [System.Management.Automation.ActionPreferenceStopException] { cd $homepath;Write-Output "Aborting.`n"; exit }
+	trap [System.Management.Automation.ActionPreferenceStopException] { 
+	      cd $homepath;Write-Output "Aborting.`n"; exit }
 	
 	Set-Location $bundlepath |Out-Null
 	# Create a manifest file and initiate  the zip archive
@@ -180,18 +183,22 @@ if ($backup.isPresent){
 	if (-not $silent.isPresent) {
 	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
 		# Abort if user types anything except return
-		if ($ans ) {throw (New-Object System.Management.Automation.ActionPreferenceStopException) }
+		if ($ans ) {throw (New-Object `
+		    System.Management.Automation.ActionPreferenceStopException) }
 	}
 		
 	# Stop the asperacentral process so that we can backup preferences.db
 	Stop-service asperacentral 
 	
 	# Get the list of context files and write them to a zip archive
-	foreach ($f in dir $BackupList) { 
+	foreach ($f in Get-ChildItem -ErrorVariable +ziperr $BackupList 2> $null) { 
 	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile }
 		
 	# Start asperacentral back up
 	Start-Service asperacentral
+	
+	Write-Host "Zip errors: $ziperr"
+	Write-Host "Zip warnings: $zipwarn"
 	
 	# gather the user data from /etc/passwd
 	$UserData = Get-Content passwd |foreach {
