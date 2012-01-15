@@ -201,24 +201,27 @@ if ($backup.isPresent){
 	Write-Host "Zip warnings: $zipwarn"
 	
 	# gather the user data from /etc/passwd
-	$UserData = Get-Content passwd |foreach {
-		$e=@{}
-		$e.name,$e.unused1,[int]$e.uid,[int]$e.gid,$e.fullname,$e.adid,$e.uuid,
-		    $e.homedir,$e.shell = $_ -split '[:,]'
-		$e
+	if (Test-Path passwd) {
+		$UserData = Get-Content passwd |foreach {
+			$e=@{}
+			$e.name,$e.unused1,[int]$e.uid,[int]$e.gid,$e.fullname,$e.adid,$e.uuid,
+			    $e.homedir,$e.shell = $_ -split '[:,]'
+			$e
+		}
+		$UserMap = @{}
+		# Build a hash of names in the /etc file
+		foreach ($u in $UserData ) { $UserMap.($u.name) = 1 }
+		# See if there are any user profiles that match the names in the passwd file
+		$UserProfiles = Get-Profiles | foreach {if ($userMap.($_.Username)) 
+		    {$_.Username}}
+		if ( $UserProfiles) {
+			Write-Host "User Profiles are present"
+		} else {
+			Write-Host "No User Profiles are present"
+		}
+	}else {
+		Write-Host "No /etc/passwd file found. Create some users!"
 	}
-	$UserMap = @{}
-	# Build a hash of names in the /etc file
-	foreach ($u in $UserData ) { $UserMap.($u.name) = 1 }
-	# See if there are any user profiles that match the names in the passwd file
-	$UserProfiles = Get-Profiles | foreach {if ($userMap.($_.Username)) 
-	    {$_.Username}}
-	if ( $UserProfiles) {
-		Write-Host "User Profiles are present"
-	} else {
-		Write-Host "No User Profiles are present"
-	}
-	
 	# CD back to where you started
     Set-location $homepath |out-null
 	write-host
@@ -240,6 +243,15 @@ if ($backup.isPresent){
 	Remove-Item -Path $manifestfile |out-null
 	
 	# Stop asperacentral
+	# Stopping asperacentral can abort transfers that are taking place, prompt
+	# user before proceeding.
+	if (-not $silent.isPresent) {
+	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
+		# Abort if user types anything except return
+		if ($ans ) {throw (New-Object `
+		    System.Management.Automation.ActionPreferenceStopException) }
+	}
+		
 	Stop-Service asperacentral 
 	
 	# Retrieve and instantiate the contents of /etc
