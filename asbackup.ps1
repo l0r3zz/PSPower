@@ -50,6 +50,42 @@ function Count-Object {
 }
 
 # *****************************************************************************
+# quiet-services - Quell aspera services that will lock files
+#
+# note: this code creates the asperacentralService variable 
+# with scoping originating in the PARENT of this called function!
+# This is an easy way to exppose the variable to the unquite-services
+# function
+# *****************************************************************************
+
+function quiet-services {
+	# Stopping asperacentral can abort transfers that are taking place, prompt
+	# user before proceeding.
+	Set-variable -Name asperacentralService -Value (Get-Service -Name asperacentral)-Scope 1
+	if (-not $silent.isPresent) {
+	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
+		# Abort if user types anything except return
+		if ($ans ) {throw (New-Object `
+		    System.Management.Automation.ActionPreferenceStopException) }
+	}
+		
+	# Stop the asperacentral process if it is running so that we can backup preferences.db
+	
+	#check the status of the asperacentral service
+	if ($asperaCentralService.status -eq "Running"){
+		Stop-service asperacentral 
+	}else{
+		Write-Host "Asperacentral is not running"
+	}
+}
+
+function unquiet-services {
+	# Start asperacentral back up only if it was running before
+	if ($asperaCentralService.status-eq "Running"){
+		Start-Service asperacentral
+	}
+}
+# *****************************************************************************
 # Get-Profiles - Gets a list of user profiles on a computer.
 # *****************************************************************************
 function Get-Profiles
@@ -136,6 +172,7 @@ function Get-Profiles
 }
 
 
+
 # =============================================================================
 # SCRIPT BODY
 # =============================================================================
@@ -178,27 +215,16 @@ if ($backup.isPresent){
 	# CD over to the aspera /etc directory
     Set-Location $asperaetc|out-null
 	
-	# Stopping asperacentral can abort transfers that are taking place, prompt
-	# user before proceeding.
-	if (-not $silent.isPresent) {
-	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
-		# Abort if user types anything except return
-		if ($ans ) {throw (New-Object `
-		    System.Management.Automation.ActionPreferenceStopException) }
-	}
-		
-	# Stop the asperacentral process so that we can backup preferences.db
-	Stop-service asperacentral 
-	
+	quiet-services
+
 	# Get the list of context files and write them to a zip archive
 	foreach ($f in Get-ChildItem -ErrorVariable +ziperr $BackupList 2> $null) { 
 	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile }
 		
-	# Start asperacentral back up
-	Start-Service asperacentral
+	unquiet-services
 	
-	Write-Host "Zip errors: $ziperr"
-	Write-Host "Zip warnings: $zipwarn"
+	foreach ($e in $ziperr ) {Write-Host "Zip error: $e"}
+	foreach ($w in $zipwarn ) {Write-Host "Zip warnings: $w"}
 	
 	# gather the user data from /etc/passwd
 	if (Test-Path passwd) {
@@ -242,17 +268,7 @@ if ($backup.isPresent){
 	}
 	Remove-Item -Path $manifestfile |out-null
 	
-	# Stop asperacentral
-	# Stopping asperacentral can abort transfers that are taking place, prompt
-	# user before proceeding.
-	if (-not $silent.isPresent) {
-	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
-		# Abort if user types anything except return
-		if ($ans ) {throw (New-Object `
-		    System.Management.Automation.ActionPreferenceStopException) }
-	}
-		
-	Stop-Service asperacentral 
+	quiet-services
 	
 	# Retrieve and instantiate the contents of /etc
 	# Note we have to do this kluge because of a bug in the Expand-Archive 
@@ -263,8 +279,7 @@ if ($backup.isPresent){
 	Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
 	    $bundlepath 
 		
-	# turn on asperacentral
-	Start-service asperacentral
+	unquiet-services 
 	
     Write-Host "Writing restore to $bundlepath  for debugging"
 	
