@@ -184,7 +184,7 @@ Import-Module Pscx       #Use the PowerShell Community Extensions
 # Variables used by both the backup and the restore function
 $manifestfile = ".asmanifest.txt"
 $BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
-              "docroot","group", "preferences.db", "foo"
+              "docroot","group", "preferences.db"
 			  
 #Find the install directory for the aspera products
 $InstallDir = (Get-ChildItem -Path `
@@ -248,8 +248,18 @@ if ($backup.isPresent){
 
 	Set-Location $bundlepath
 	# Create a manifest file and add it to  the zip archive
-	New-Item -Name $manifestfile -type "file" `
+	New-Item -Force -Name $manifestfile -type "file" `
 	    -Value "aspera_etc=$asperaetc `nbundlepath=$bundlepath" |Out-Null
+	# Add Userdata info for found uers in the passsword file
+	# Ugly hack to keep add-content from appending newline chars :(
+	Add-Content -Path $manifestfile ([Byte[]][Char[]] "`nuser_profile= [")`
+	    -Encoding Byte
+	foreach ($u in $UserProfiles) {
+		Add-Content -Path $manifestfile ([Byte[]][Char[]]`
+		  "{'username':`'$($u.Username)`','profileref':`'$($u.ProfileRef)`'},")`
+		  -Encoding Byte
+	}
+	Add-Content -Path $manifestfile "]"
 
 	Get-ChildItem $manifestfile | Write-Zip -flat -Append -OutputPath $bundlefile | out-null 
 	# Remove the manifest file
