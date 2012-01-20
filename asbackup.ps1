@@ -204,13 +204,9 @@ if ($backup.isPresent){
 	trap [System.Management.Automation.ActionPreferenceStopException] { 
 	      cd $homepath;Write-Output "Aborting.`n"; exit }
 	
-	Set-Location $bundlepath |Out-Null
-	# Create a manifest file and initiate  the zip archive
-	New-Item -Name $manifestfile -type "file" `
-	    -Value "aspera_etc=$asperaetc `nbundlepath=$bundlepath" |Out-Null
-	Get-ChildItem  $manifestfile | Write-Zip -OutputPath $bundlefile | out-null 
-	# Remove the manifest file
-	Remove-Item -Path ($bundlepath + $manifestfile) |out-null
+	Set-Location $bundlepath |Out-Null	
+	#Create the zip archive file
+	Set-Content $bundlefile ("PK" + [char]5 + [char]6 + ("$([char]0)" * 18 ))
 	
 	# CD over to the aspera /etc directory
     Set-Location $asperaetc|out-null
@@ -239,7 +235,7 @@ if ($backup.isPresent){
 		foreach ($u in $UserData ) { $UserMap.($u.name) = 1 }
 		# See if there are any user profiles that match the names in the passwd file
 		$UserProfiles = Get-Profiles | foreach {if ($userMap.($_.Username)) 
-		    {$_.Username}}
+		    {$_}}
 		if ( $UserProfiles) {
 			Write-Host "User Profiles are present"
 		} else {
@@ -248,6 +244,17 @@ if ($backup.isPresent){
 	}else {
 		Write-Host "No /etc/passwd file found. Create some users!"
 	}
+	
+
+	Set-Location $bundlepath
+	# Create a manifest file and add it to  the zip archive
+	New-Item -Name $manifestfile -type "file" `
+	    -Value "aspera_etc=$asperaetc `nbundlepath=$bundlepath" |Out-Null
+
+	Get-ChildItem $manifestfile | Write-Zip -flat -Append -OutputPath $bundlefile | out-null 
+	# Remove the manifest file
+	Remove-Item -Path  ($bundlepath + $manifestfile) |out-null
+	
 	# CD back to where you started
     Set-location $homepath |out-null
 	write-host
@@ -255,6 +262,7 @@ if ($backup.isPresent){
 # Perform Restore Operation
 }elseif( $restore.isPresent){
 	$bundlefile = $bundle
+	$restorepath = "Windows\Temp\"
 	
 	# Retrieve the manifest file containing the Metadata
 	Read-Archive -Path $bundlefile |Where-Object { $_.name -like $manifestfile}`
@@ -262,11 +270,12 @@ if ($backup.isPresent){
 	
 	# Parse the Metadata into a hash table based on keys in the manifiest file
 	$ArchiveMetaData = @{}
-	get-Content $manifestfile | foreach {
+	$restorebundle = $restorepath + $manifestfile 
+	get-Content $restorebundle | foreach {
 	    $key,$value = $_ -split '='
 		$ArchiveMetaData.$key = $value
 	}
-	Remove-Item -Path $manifestfile |out-null
+	Remove-Item -Path $restorebundle |out-null
 	
 	quiet-services
 	
