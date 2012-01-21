@@ -191,6 +191,11 @@ $InstallDir = (Get-ChildItem -Path `
     "Microsoft.PowerShell.Core\Registry::HKEY_CURRENT_USER\Software\Aspera\"`
 	|ForEach-Object {Get-Childitem  $_.pspath `
 	}|ForEach-Object {Get-ItemProperty $_.pspath}).InstallDir
+	
+# Find the Path to the Users Directories
+$U = [string]( (Get-childitem Env:USERPROFILE).value)
+$UserDirPath = $U.substring(0,$U.lastindexof("\")+1)
+
 			  
 # Perform Backup Operation				  
 if ($backup.isPresent){
@@ -220,7 +225,7 @@ if ($backup.isPresent){
 	unquiet-services
 	
 	foreach ($e in $ziperr ) {Write-Host "Zip error: $e"}
-	foreach ($w in $zipwarn ) {Write-Host "Zip warnings: $w"}
+
 	
 	# gather the user data from /etc/passwd
 	if (Test-Path passwd) {
