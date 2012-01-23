@@ -261,8 +261,13 @@ if ($backup.isPresent){
 	    -Encoding Byte
 	foreach ($u in $UserProfiles) {
 		Add-Content -Path $manifestfile ([Byte[]][Char[]]`
-		  "{'username':`'$($u.Username)`','profileref':`'$($u.ProfileRef)`'},")`
+		  "{'username':`'$($u.Username)`','localpath':`'$($u.ProfileRef.LocalPath)`','sid':`'$($u.ProfileRef.SID)`'},")`
 		  -Encoding Byte
+		  
+		 # Get the list of context files and write them to a zip archive
+		 $sshdirpath  = $u.profileRef.localPath + "\.ssh\*"
+	
+	    Write-Zip -Path $sshdirpath -Append -Errorvariable +ziperr -OutputPath $bundlefile | out-null
 	}
 	Add-Content -Path $manifestfile "]"
 
