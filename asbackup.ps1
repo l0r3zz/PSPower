@@ -120,11 +120,6 @@ function Get-Profiles
 	param ([parameter(ValueFromPipeLine=$true)][String]$computer = "localhost")	
 	process {
 		$ErrorActionPreference = "SilentlyContinue"
-		# Check for pipe input
-		#if ($_.Name) { $computer = $_.Name | Test-Host -TCPPort 135 }
-		#elseif ($_) { $computer = $_ | Test-Host -TCPPort 135 }
-		#else { $computer = Test-Host -TCPPort 135 $computer }
-
 		$profiles=$null
 		# Get the userprofile list and then filter out the built-in accounts
 		if ($computer) {
