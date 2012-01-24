@@ -279,7 +279,7 @@ if ($backup.isPresent){
 	write-host
 
 # Perform Restore Operation
-}elseif( $restore.isPresent){
+}elseif( $restore.isPresent -or $debugrestore.isPresent){
 	$bundlefile = $bundle
 	$restorepath = "Windows\Temp\"
 	
@@ -325,6 +325,6 @@ if ($backup.isPresent){
 
 	
 }else{
-    Write-Host "Usage:
-	asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore] <bundle>"
+    Write-Host "Usage:"`
+	"asbackup  -backup [-no-priv-data]|-restore|-debugrestore [-silent] <bundle>"
 }
