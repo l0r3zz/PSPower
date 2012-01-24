@@ -7,21 +7,23 @@
 # Created: [12/26/2011]
 # Author: Geoff White
 # Arguments:
-# Usage: ascbkup   --backup [--no-priv-data] | --restore    <bundle>
+# Usage: asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore]   <bundle>
 #
 #        <bundle>       is some form of archive file that contains/will contain 
 #                       full user data from the source Server
 #
-#        --backup       Backup all the configuration and user credential data to
+#        -backup       Backup all the configuration and user credential data to
 #                       <bundle>
 #
-#        --restore      Restore all configuration and user credential data from
+#        -restore      Restore all configuration and user credential data from
 #                       <bundle> to the destination Server
 #
-#        --no-priv-data Do not back up (or restore) sensitive  user data  
+#        -no-priv-data Do not back up (or restore) sensitive  user data  
 #                       (such as ssh private keys)  if present
-#        --silent       Perform ootentially disruptive actions without prompting
+#        -silent       Perform ootentially disruptive actions without prompting
 #                        user for input.
+#        -debugrestore Restore to \Windoes\Temp instead of $SystemDrive\
+#        
 # =============================================================================
 # Purpose: Backup or Migrate an Enterprise Server Instance to another Machine
 #
@@ -33,6 +35,7 @@ Param (
     [switch]$restore,
     [switch]$noprivdata,
 	[switch]$silent,
+	[switch]$debugrestore,
     [string[]]$bundle
 )
 # =============================================================================
@@ -190,6 +193,7 @@ $InstallDir = (Get-ChildItem -Path `
 # Find the Path to the Users Directories
 $U = [string]( (Get-childitem Env:USERPROFILE).value)
 $UserDirPath = $U.substring(0,$U.lastindexof("\")+1)
+$SystemDrive = [string] ((Get-ChildItem Env:SystemDrive).value)
 
 			  
 # Perform Backup Operation				  
@@ -300,14 +304,27 @@ if ($backup.isPresent){
 	$NumberOfFiles = Expand-Archive -Path $bundlefile -PassThru | Count-Object
 	$IndexRange = 1..$numberOfFiles
 	$bundlepath = $ArchiveMetaData.bundlepath 
-	Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
-	    $bundlepath 
-		
+	if ($debugrestore.isPresent){
+		Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
+	    	$bundlepath     
+		Write-Host "Writing restore to $bundlepath  for debugging"
+	} else {
+		$ans = Read-Host "Overwriting Aspera config files?  {yes=ENTER/No=N]: "
+		# Abort if user types anything except return
+		if ($ans ) {
+			unquiet-services 
+			throw (New-Object System.Management.Automation.ActionPreferenceStopException) 
+		}
+			
+		Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
+	    	"$SystemDrive\"
+	}
+	
 	unquiet-services 
 	
-    Write-Host "Writing restore to $bundlepath  for debugging"
+
 	
 }else{
     Write-Host "Usage:
-	   asbackup -silent |-backup [-noprivdata] | -restore <bundle>"
+	asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore] <bundle>"
 }
