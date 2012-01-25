@@ -301,12 +301,11 @@ if ($backup.isPresent){
 	# Retrieve and instantiate the contents of /etc
 	# Note we have to do this kluge because of a bug in the Expand-Archive 
 	# Commandlet that has a broken -EntryPath switch 
-	$NumberOfFiles = Expand-Archive -Path $bundlefile -PassThru | Count-Object
-	$IndexRange = 1..$numberOfFiles
-	$bundlepath = $ArchiveMetaData.bundlepath 
+	# $NumberOfFiles = Expand-Archive -Path $bundlefile -PassThru | Count-Object
+	# $IndexRange = 1..$numberOfFiles
+	# $bundlepath = $ArchiveMetaData.bundlepath 
 	if ($debugrestore.isPresent){
-		Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
-	    	$bundlepath     
+		Expand-Archive -Path $bundlefile -OutputPath $bundlepath     
 		Write-Host "Writing restore to $bundlepath  for debugging"
 	} else {
 		$ans = Read-Host "Overwriting Aspera config files?  {yes=ENTER/No=N]: "
@@ -316,8 +315,7 @@ if ($backup.isPresent){
 			throw (New-Object System.Management.Automation.ActionPreferenceStopException) 
 		}
 			
-		Expand-Archive -Path $bundlefile -Index $IndexRange -OutputPath `
-	    	"$SystemDrive\"
+		Expand-Archive -Path $bundlefile -OutputPath "$SystemDrive\"
 	}
 	
 	unquiet-services 
