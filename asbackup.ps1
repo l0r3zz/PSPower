@@ -218,7 +218,7 @@ if ($backup.isPresent){
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
 	
-	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "l $bundlefile"
+	#Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "l $bundlefile"
 	
 	trap [System.Management.Automation.ActionPreferenceStopException] { 
 	      cd $homepath;Write-Output "Aborting.`n"; exit }
@@ -234,8 +234,8 @@ if ($backup.isPresent){
 
 	# Get the list of context files and write them to a zip archive
 	foreach ($f in Get-ChildItem -ErrorVariable +ziperr $BackupList 2> $null) { 
-	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile 
-#	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile `"$f`" "
+	    #Write-Zip -inputObject $f -Append -OutputPath $bundlefile 
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile `"$f`" "
 	}
 	unquiet-services
 	
@@ -280,9 +280,14 @@ if ($backup.isPresent){
 		  -Encoding Byte
 		  
 		 # Get the list of context files and write them to a zip archive
-		 $sshdirpath  = $u.profileRef.localPath + "\.ssh\*"
+		 $sshdirpath  = $u.profileRef.localPath + "\.ssh\"
 	
-	    Write-Zip -Path $sshdirpath -Append -Errorvariable +ziperr -OutputPath $bundlefile | out-null
+	    #Write-Zip -Path $sshdirpath -Append -Errorvariable +ziperr -OutputPath $bundlefile | out-null
+		$templocation = pwd
+		Set-Location "c:\Users\"
+		Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $sshdirpath" 
+		Set-Location $templocation 
+		
 	}
 	Add-Content -Path $manifestfile "]"
 
