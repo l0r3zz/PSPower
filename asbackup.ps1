@@ -195,6 +195,19 @@ $U = [string]( (Get-childitem Env:USERPROFILE).value)
 $UserDirPath = $U.substring(0,$U.lastindexof("\")+1)
 $SystemDrive = [string] ((Get-ChildItem Env:SystemDrive).value)
 
+# Check  for the 7zip utility and locate it if present
+$bk7zipbin = "\7-zip\7z.exe"
+$bk7zippath = ($Env:ProgramFiles + $bk7zipbin)
+if (!(Test-Path $bk7zippath) ) {
+	if (!(Test-Path ("$Env:ProgramFiles(x86)" + $bk7zipbin)) ) {
+		Write-Host " Can't find 7-zip executable, load it."
+	} else {
+		$bk7zippath = ("$Env:ProgramFiles(x86)" + $bk7zipbin)
+	}
+}
+
+
+
 			  
 # Perform Backup Operation				  
 if ($backup.isPresent){
@@ -204,6 +217,8 @@ if ($backup.isPresent){
 	$asperaetcfiles = $asperaetc + "\*"
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
+	
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "l $bundlefile"
 	
 	trap [System.Management.Automation.ActionPreferenceStopException] { 
 	      cd $homepath;Write-Output "Aborting.`n"; exit }
@@ -219,8 +234,9 @@ if ($backup.isPresent){
 
 	# Get the list of context files and write them to a zip archive
 	foreach ($f in Get-ChildItem -ErrorVariable +ziperr $BackupList 2> $null) { 
-	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile }
-		
+	    Write-Zip -inputObject $f -Append -OutputPath $bundlefile 
+#	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile `"$f`" "
+	}
 	unquiet-services
 	
 	foreach ($e in $ziperr ) {Write-Host "Zip error: $e"}
