@@ -7,7 +7,8 @@
 # Created: [12/26/2011]
 # Author: Geoff White
 # Arguments:
-# Usage: asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore]   <bundle>
+# Usage: asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore]
+#                     <bundle>
 #
 #        <bundle>       is some form of archive file that contains/will contain 
 #                       full user data from the source Server
@@ -64,7 +65,8 @@ function Count-Object {
 function quiet-services {
 	# Stopping asperacentral can abort transfers that are taking place, prompt
 	# user before proceeding.
-	Set-variable -Name asperacentralService -Value (Get-Service -Name asperacentral)-Scope 1
+	Set-variable -Name asperacentralService `
+	    -Value (Get-Service -Name asperacentral)-Scope 1
 	if (-not $silent.isPresent) {
 	    $ans = Read-Host "Stopping asperacentral proceed?  {yes=ENTER/No=N]: "
 		# Abort if user types anything except return
@@ -72,7 +74,8 @@ function quiet-services {
 		    System.Management.Automation.ActionPreferenceStopException) }
 	}
 		
-	# Stop the asperacentral process if it is running so that we can backup preferences.db
+	# Stop the asperacentral process if it is running so that we can 
+	# backup preferences.db
 	
 	#check the status of the asperacentral service
 	if ($asperaCentralService.status -eq "Running"){
@@ -102,7 +105,8 @@ function Get-Profiles
 		The info is pipable and can be used to do other useful tasks.
 		
 		.Parameter computer
-		The computer on which you wish to recieve profiles. (defaults to localhost)
+		The computer on which you wish to recieve profiles.
+		(defaults to localhost)
 	
 		.Example
 		Get-Profiles -comptuer Server01
@@ -242,26 +246,26 @@ if ($backup.isPresent){
 	Set-Location "\"
 	$szipstring = ""
 	foreach ($x in $newbackuplist ) { $szipstring += "`"$x`" " }
-	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $szipstring " -wait
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
+	    -ArgumentList "a $bundlefile $szipstring " -wait
 	Set-Location $asperaetc|out-null
 
 	unquiet-services
-	
-	foreach ($e in $ziperr ) {Write-Host "Zip error: $e"}
-
 	
 	# gather the user data from /etc/passwd
 	if (Test-Path passwd) {
 		$UserData = Get-Content passwd |foreach {
 			$e=@{}
-			$e.name,$e.unused1,[int]$e.uid,[int]$e.gid,$e.fullname,$e.adid,$e.uuid,
+			$e.name,$e.unused1,[int]$e.uid,[int]$e.gid,
+			    $e.fullname,$e.adid,$e.uuid,
 			    $e.homedir,$e.shell = $_ -split '[:,]'
 			$e
 		}
 		$UserMap = @{}
 		# Build a hash of names in the /etc file
 		foreach ($u in $UserData ) { $UserMap.($u.name) = 1 }
-		# See if there are any user profiles that match the names in the passwd file
+		# See if there are any user profiles that match
+		# the names in the passwd file
 		$UserProfiles = Get-Profiles | foreach {if ($userMap.($_.Username)) 
 		    {$_}}
 		if ( $UserProfiles) {
@@ -284,7 +288,8 @@ if ($backup.isPresent){
 	    -Encoding Byte
 	foreach ($u in $UserProfiles) {
 		Add-Content -Path $manifestfile ([Byte[]][Char[]]`
-		  "{'username':`'$($u.Username)`','localpath':`'$($u.ProfileRef.LocalPath)`','sid':`'$($u.ProfileRef.SID)`'},")`
+		  ("{'username':`'$($u.Username)`','localpath':" +
+		  "`'$($u.ProfileRef.LocalPath)`','sid':`'$($u.ProfileRef.SID)`'},") )`
 		  -Encoding Byte
 		  
 		 # Get the list of context files and write them to a zip archive
@@ -292,13 +297,15 @@ if ($backup.isPresent){
 	
 		$templocation = pwd
 		Set-Location "c:\"
-		Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $sshdirpath " -wait
+		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
+		    -ArgumentList "a $bundlefile $sshdirpath " -wait
 		Set-Location $templocation 
 		
 	}
 	Add-Content -Path $manifestfile "]"
 
-	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $manifestfile " -wait
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
+	    -ArgumentList "a $bundlefile $manifestfile " -wait
 	# Remove the manifest file
 	Remove-Item -Path  ($bundlepath + $manifestfile) |out-null
 	
@@ -313,9 +320,8 @@ if ($backup.isPresent){
 	
 	Set-Location $restorepath 
 	# Retrieve the manifest file containing the Metadata
-	#Read-Archive -Path $bundlefile |Where-Object { $_.name -like $manifestfile}`
-	#| Expand-Archive -PassThru | out-null
-	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "e $bundlefile -aoa $manifestfile " -wait
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
+	    -ArgumentList "e $bundlefile -aoa $manifestfile " -wait
 	
 	# Parse the Metadata into a hash table based on keys in the manifiest file
 	$ArchiveMetaData = @{}
@@ -328,14 +334,16 @@ if ($backup.isPresent){
 	quiet-services
 	
 	if ($debugrestore.isPresent){
-		Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList ("x $bundlefile -aoa -x!"+$manifestfile) -wait    
+		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
+		    -ArgumentList ("x $bundlefile -aoa -x!"+$manifestfile) -wait    
 		Write-Host "Writing restore to $bundlepath  for debugging"
 	} else {
 		$ans = Read-Host "Overwriting Aspera config files?  {yes=ENTER/No=N]: "
 		# Abort if user types anything except return
 		if ($ans ) {
 			unquiet-services 
-			throw (New-Object System.Management.Automation.ActionPreferenceStopException) 
+			throw (New-Object `
+			System.Management.Automation.ActionPreferenceStopException) 
 		}
 			
 		#Expand-Archive -Path $bundlefile -OutputPath "$SystemDrive\"
@@ -349,6 +357,6 @@ if ($backup.isPresent){
 	Set-Location $homepath
 	
 }else{
-    Write-Host "Usage:"`
-	"asbackup  -backup [-no-priv-data]|-restore|-debugrestore [-silent] <bundle>"
+    Write-Host "`nUsage: asbackup  "`
+	"-backup [-no-priv-data]|-restore|-debugrestore [-silent] <bundle>"
 }
