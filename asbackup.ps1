@@ -205,8 +205,12 @@ if (!(Test-Path $bk7zippath) ) {
 		$bk7zippath = ("$Env:ProgramFiles(x86)" + $bk7zipbin)
 	}
 }
-
-
+# Some initisl variables 
+$homepath = pwd
+$asperaetc = $InstallDir+"etc"
+$asperaetcfiles = $asperaetc + "\*"
+$bundlepath =   "c:\Windows\Temp\"
+$bundlefile = $bundlepath + "$bundle.zip"
 
 			  
 # Perform Backup Operation				  
@@ -217,8 +221,6 @@ if ($backup.isPresent){
 	$asperaetcfiles = $asperaetc + "\*"
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
-	
-	#Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "l $bundlefile"
 	
 	trap [System.Management.Automation.ActionPreferenceStopException] { 
 	      cd $homepath;Write-Output "Aborting.`n"; exit }
@@ -233,10 +235,16 @@ if ($backup.isPresent){
 	quiet-services
 
 	# Get the list of context files and write them to a zip archive
-	foreach ($f in Get-ChildItem -ErrorVariable +ziperr $BackupList 2> $null) { 
-	    #Write-Zip -inputObject $f -Append -OutputPath $bundlefile 
-	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile `"$f`" "
+	$newbackuplist += foreach ( $f in $BackupList) {
+	    $return = "$asperaetc\$f "
+		$return.substring(3)
 	}
+	Set-Location "\"
+	$szipstring = ""
+	foreach ($x in $newbackuplist ) { $szipstring += "`"$x`" " }
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $szipstring " -wait
+	Set-Location $asperaetc|out-null
+
 	unquiet-services
 	
 	foreach ($e in $ziperr ) {Write-Host "Zip error: $e"}
@@ -280,18 +288,17 @@ if ($backup.isPresent){
 		  -Encoding Byte
 		  
 		 # Get the list of context files and write them to a zip archive
-		 $sshdirpath  = $u.profileRef.localPath + "\.ssh\"
+		 $sshdirpath  = ($u.profileRef.localPath + "\.ssh\").substring(3)
 	
-	    #Write-Zip -Path $sshdirpath -Append -Errorvariable +ziperr -OutputPath $bundlefile | out-null
 		$templocation = pwd
-		Set-Location "c:\Users\"
-		Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $sshdirpath" 
+		Set-Location "c:\"
+		Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $sshdirpath " -wait
 		Set-Location $templocation 
 		
 	}
 	Add-Content -Path $manifestfile "]"
 
-	Get-ChildItem $manifestfile | Write-Zip -flat -Append -OutputPath $bundlefile | out-null 
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "a $bundlefile $manifestfile " -wait
 	# Remove the manifest file
 	Remove-Item -Path  ($bundlepath + $manifestfile) |out-null
 	
@@ -302,31 +309,26 @@ if ($backup.isPresent){
 # Perform Restore Operation
 }elseif( $restore.isPresent -or $debugrestore.isPresent){
 	$bundlefile = $bundle
-	$restorepath = "Windows\Temp\"
+	$restorepath = "\Windows\Temp\"
 	
+	Set-Location $restorepath 
 	# Retrieve the manifest file containing the Metadata
-	Read-Archive -Path $bundlefile |Where-Object { $_.name -like $manifestfile}`
-	| Expand-Archive -PassThru | out-null
+	#Read-Archive -Path $bundlefile |Where-Object { $_.name -like $manifestfile}`
+	#| Expand-Archive -PassThru | out-null
+	Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList "e $bundlefile -aoa $manifestfile " -wait
 	
 	# Parse the Metadata into a hash table based on keys in the manifiest file
 	$ArchiveMetaData = @{}
-	$restorebundle = $restorepath + $manifestfile 
-	get-Content $restorebundle | foreach {
+	get-Content $manifestfile | foreach {
 	    $key,$value = $_ -split '='
 		$ArchiveMetaData.$key = $value
 	}
-	Remove-Item -Path $restorebundle |out-null
+	Remove-Item -Path $manifestfile |out-null
 	
 	quiet-services
 	
-	# Retrieve and instantiate the contents of /etc
-	# Note we have to do this kluge because of a bug in the Expand-Archive 
-	# Commandlet that has a broken -EntryPath switch 
-	# $NumberOfFiles = Expand-Archive -Path $bundlefile -PassThru | Count-Object
-	# $IndexRange = 1..$numberOfFiles
-	# $bundlepath = $ArchiveMetaData.bundlepath 
 	if ($debugrestore.isPresent){
-		Expand-Archive -Path $bundlefile -OutputPath $bundlepath     
+		Start-Process $bk7zippath -RedirectStandardOutput "test.out" -ArgumentList ("x $bundlefile -aoa -x!"+$manifestfile) -wait    
 		Write-Host "Writing restore to $bundlepath  for debugging"
 	} else {
 		$ans = Read-Host "Overwriting Aspera config files?  {yes=ENTER/No=N]: "
@@ -336,12 +338,15 @@ if ($backup.isPresent){
 			throw (New-Object System.Management.Automation.ActionPreferenceStopException) 
 		}
 			
-		Expand-Archive -Path $bundlefile -OutputPath "$SystemDrive\"
+		#Expand-Archive -Path $bundlefile -OutputPath "$SystemDrive\"
+		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
+		-ArgumentList `
+		("x $bundlefile -aoa -x!"+$manifestfile+" -o"+"$SystemDrive\") -wait 
 	}
 	
 	unquiet-services 
 	
-
+	Set-Location $homepath
 	
 }else{
     Write-Host "Usage:"`
