@@ -20,10 +20,10 @@
 #                       <bundle> to the destination Server
 #
 #        -no-priv-data Do not back up (or restore) sensitive  user data  
-#                       (such as ssh private keys)  if present
-#        -silent       Perform ootentially disruptive actions without prompting
+#                       (such as ssh private keys)  if present (not implemented)
+#        -silent       Perform potentially disruptive actions without prompting
 #                        user for input.
-#        -debugrestore Restore to \Windoes\Temp instead of $SystemDrive\
+#        -debugrestore Restore to \Windows\Temp\ instead of $SystemDrive\
 #        
 # =============================================================================
 # Purpose: Backup or Migrate an Enterprise Server Instance to another Machine
@@ -180,9 +180,6 @@ function Get-Profiles
 # =============================================================================
 
 
-Import-Module Pscx       #Use the PowerShell Community Extensions
-
-
 # Variables used by both the backup and the restore function
 $manifestfile = ".asmanifest.txt"
 $BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
@@ -209,7 +206,7 @@ if (!(Test-Path $bk7zippath) ) {
 		$bk7zippath = ("$Env:ProgramFiles(x86)" + $bk7zipbin)
 	}
 }
-# Some initisl variables 
+# Some initial variables 
 $homepath = pwd
 $asperaetc = $InstallDir+"etc"
 $asperaetcfiles = $asperaetc + "\*"
@@ -292,8 +289,8 @@ if ($backup.isPresent){
 		  "`'$($u.ProfileRef.LocalPath)`','sid':`'$($u.ProfileRef.SID)`'},") )`
 		  -Encoding Byte
 		  
-		 # Get the list of context files and write them to a zip archive
-		 $sshdirpath  = ($u.profileRef.localPath + "\.ssh\").substring(3)
+		# Get the list of context files and write them to a zip archive
+		$sshdirpath  = ($u.profileRef.localPath + "\.ssh\").substring(3)
 	
 		$templocation = pwd
 		Set-Location "c:\"
