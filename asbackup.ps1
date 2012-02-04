@@ -7,6 +7,7 @@
 # Created: [12/26/2011]
 # Author: Geoff White
 # Arguments:
+# Version 0.9.20120203 beta
 # Usage: asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore]
 #                     <bundle>
 #
@@ -201,7 +202,7 @@ $bk7zipbin = "\7-zip\7z.exe"
 $bk7zippath = ($Env:ProgramFiles + $bk7zipbin)
 if (!(Test-Path $bk7zippath) ) {
 	if (!(Test-Path ("$Env:ProgramFiles(x86)" + $bk7zipbin)) ) {
-		Write-Host " Can't find 7-zip executable, load it."
+		Write-Host " Can't find 7-zip executable, load it. http://www.7-zip.org"
 	} else {
 		$bk7zippath = ("$Env:ProgramFiles(x86)" + $bk7zipbin)
 	}
