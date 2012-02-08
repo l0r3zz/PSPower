@@ -245,7 +245,9 @@ if ($backup.isPresent){
 	$szipstring = ""
 	foreach ($x in $newbackuplist ) { $szipstring += "`"$x`" " }
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
-	    -ArgumentList "a $bundlefile $szipstring " -wait
+	    -ArgumentList "a $bundlefile $szipstring " -wait -NoNewWindow
+#	$foo = [Diagnostics.Process]::Start( "$bk7zippath"," a $bundlefile $szipstring")
+#	$foo.WaitforExit()
 	Set-Location $asperaetc|out-null
 
 	unquiet-services
@@ -296,7 +298,9 @@ if ($backup.isPresent){
 		$templocation = pwd
 		Set-Location "c:\"
 		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
-		    -ArgumentList "a $bundlefile $sshdirpath " -wait
+		    -ArgumentList "a $bundlefile $sshdirpath " -wait -NoNewWindow
+#		$foo = [Diagnostics.Process]::Start( "$bk7zippath"," a $bundlefile $sshdirpath")
+#		$foo.WaitForExit()
 		Set-Location $templocation 
 		
 	}
@@ -304,6 +308,8 @@ if ($backup.isPresent){
 
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 	    -ArgumentList "a $bundlefile $manifestfile " -wait
+#	$foo = [Diagnostics.Process]::Start( "$bk7zippath"," a $bundlefile $manifiestfile")
+#	$foo.waitforexit()
 	# Remove the manifest file
 	Remove-Item -Path  ($bundlepath + $manifestfile) |out-null
 	
@@ -319,7 +325,7 @@ if ($backup.isPresent){
 	Set-Location $restorepath 
 	# Retrieve the manifest file containing the Metadata
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
-	    -ArgumentList "e $bundlefile -aoa $manifestfile " -wait
+	    -ArgumentList "e $bundlefile -aoa $manifestfile " -wait -NoNewWindow
 	
 	# Parse the Metadata into a hash table based on keys in the manifiest file
 	$ArchiveMetaData = @{}
@@ -347,7 +353,7 @@ if ($backup.isPresent){
 		#Expand-Archive -Path $bundlefile -OutputPath "$SystemDrive\"
 		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 		-ArgumentList `
-		("x $bundlefile -aoa -x!"+$manifestfile+" -o"+"$SystemDrive\") -wait 
+		("x $bundlefile -aoa -x!"+$manifestfile+" -o"+"$SystemDrive\") -wait -NoNewWindow
 	}
 	
 	unquiet-services 
