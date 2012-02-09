@@ -29,8 +29,8 @@
 # =============================================================================
 # Purpose: Backup or Migrate an Enterprise Server Instance to another Machine
 #
-#
 # =============================================================================
+
 [CmdletBinding()]
 Param (
     [switch]$backup,
@@ -40,6 +40,7 @@ Param (
 	[switch]$debugrestore,
     [string[]]$bundle
 )
+
 # =============================================================================
 # FUNCTION LISTINGS
 # =============================================================================
@@ -59,7 +60,7 @@ function Count-Object {
 #
 # note: this code creates the asperacentralService variable 
 # with scoping originating in the PARENT of this called function!
-# This is an easy way to exppose the variable to the unquite-services
+# This is an easy way to expose the variable to the unquite-services
 # function
 # *****************************************************************************
 
@@ -180,7 +181,17 @@ function Get-Profiles
 # SCRIPT BODY
 # =============================================================================
 
-
+trap { 
+    "Error Category {0}, Error Type {1}, ID: {2}, Message: {3}" -f 
+	$_.CategoryInfo.Category,
+	$_.Exception.GetType().FullName,
+	$_.FullyQualifiedErrorID, $_.Exception.Message;
+	cd $homepath;Write-Output "Aborting.`n"; exit 
+	}
+	
+trap [System.Management.Automation.ActionPreferenceStopException] { 
+	 cd $homepath;Write-Output "Aborting.`n"; exit }
+	
 # Variables used by both the backup and the restore function
 $manifestfile = ".asmanifest.txt"
 $BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
@@ -224,9 +235,7 @@ if ($backup.isPresent){
     $bundlepath =   "c:\Windows\Temp\"
 	$bundlefile = $bundlepath + "$bundle.zip"
 	
-	trap [System.Management.Automation.ActionPreferenceStopException] { 
-	      cd $homepath;Write-Output "Aborting.`n"; exit }
-	
+
 	Set-Location $bundlepath |Out-Null	
 	#Create the zip archive file
 	Set-Content $bundlefile ("PK" + [char]5 + [char]6 + ("$([char]0)" * 18 ))
