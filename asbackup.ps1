@@ -7,7 +7,7 @@
 # Created: [12/26/2011]
 # Author: Geoff White
 # Arguments:
-# Version 0.9.20120203 beta
+# Version 0.9.20120209 beta
 # Usage: asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore]
 #                     <bundle>
 #
@@ -266,8 +266,7 @@ if ($backup.isPresent){
 	foreach ($x in $newbackuplist ) { $szipstring += "`"$x`" " }
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 	    -ArgumentList "a $bundlefile $szipstring " -wait -NoNewWindow
-#	$foo = [Diagnostics.Process]::Start( "$bk7zippath"," a $bundlefile $szipstring")
-#	$foo.WaitforExit()
+
 	Set-Location $asperaetc|out-null
 
 	unquiet-services
@@ -319,8 +318,7 @@ if ($backup.isPresent){
 		Set-Location "c:\"
 		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 		    -ArgumentList "a $bundlefile $sshdirpath " -wait -NoNewWindow
-#		$foo = [Diagnostics.Process]::Start( "$bk7zippath"," a $bundlefile $sshdirpath")
-#		$foo.WaitForExit()
+
 		Set-Location $templocation 
 		
 	}
@@ -328,8 +326,7 @@ if ($backup.isPresent){
 
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 	    -ArgumentList "a $bundlefile $manifestfile " -wait
-#	$foo = [Diagnostics.Process]::Start( "$bk7zippath"," a $bundlefile $manifiestfile")
-#	$foo.waitforexit()
+
 	# Remove the manifest file
 	Remove-Item -Path  ($bundlepath + $manifestfile) |out-null
 	
@@ -345,7 +342,12 @@ if ($backup.isPresent){
 	Set-Location $restorepath 
 	# Retrieve the manifest file containing the Metadata
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
-	    -ArgumentList "e $bundlefile -aoa $manifestfile " -wait -NoNewWindow
+	    -ArgumentList "e $bundle -aoa $manifestfile " -wait -NoNewWindow
+	if ( -not (Test-Path ".\$manifestfile")) {
+		Write-Host "No .asmanifest file found, is this an asbackup bundle?`n"
+		throw (New-Object `
+			System.Management.Automation.ActionPreferenceStopException)
+	}
 	
 	# Parse the Metadata into a hash table based on keys in the manifiest file
 	$ArchiveMetaData = @{}
@@ -373,7 +375,7 @@ if ($backup.isPresent){
 		#Expand-Archive -Path $bundlefile -OutputPath "$SystemDrive\"
 		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 		-ArgumentList `
-		("x $bundlefile -aoa -x!"+$manifestfile+" -o"+"$SystemDrive\") -wait -NoNewWindow
+		("x $bundlefile -aoa -x!"+$manifestfile+" -o"+"$SystemDrive\") -wait
 	}
 	
 	unquiet-services 
