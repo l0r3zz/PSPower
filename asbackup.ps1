@@ -188,7 +188,8 @@ $OldErrorActionPref = $ErrorActionPreference
 # This is a catch all trap that catches anything that is caught before,
 # basically make sure the user winds up back at their hime directory
 trap { 
-    "CAUGHT PROGRAM ABORT `nError Category {0},`nError Type {1},`nID: {2}, `nMessage: {3}" -f 
+    ("CAUGHT PROGRAM ABORT `nError Category {0}," +
+	"`nError Type {1},`nID: {2}, `nMessage: {3}") -f 
 	$_.CategoryInfo.Category,
 	$_.Exception.GetType().FullName,
 	$_.FullyQualifiedErrorID, $_.Exception.Message;
@@ -336,9 +337,13 @@ if ($backup.isPresent){
 
 # Perform Restore Operation
 }elseif( $restore.isPresent -or $debugrestore.isPresent){
+
+	# This is a simple check to guarantee that this is actually a asbackup
+	# Bundle. A more thorough check would be to examine the contents of the 
+	# .asmanifest.txt file
 	if (-not (Test-Path $bundle)){ Write-Host "$bundle, not found`n"; exit }
 	$restorepath = "\Windows\Temp\"
-	
+
 	Set-Location $restorepath 
 	# Retrieve the manifest file containing the Metadata
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
