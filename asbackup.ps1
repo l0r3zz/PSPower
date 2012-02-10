@@ -180,11 +180,13 @@ function Get-Profiles
 # =============================================================================
 # SCRIPT BODY
 # =============================================================================
+
 ###########################################
 ## Exception handlers
 ###########################################
 $OldErrorActionPref = $ErrorActionPreference
 #$ErrorActionPreference = 'Stop'
+
 # This is a catch all trap that catches anything that is caught before,
 # basically make sure the user winds up back at their hime directory
 trap { 
@@ -237,7 +239,8 @@ $asperaetcfiles = $asperaetc + "\*"
 $bundlepath =   "c:\Windows\Temp\"
 $bundlefile = $bundlepath + "$bundle.zip"
 
-			  
+# OK let's go...		
+
 # Perform Backup Operation				  
 if ($backup.isPresent){
 	# Some initisl variables 
@@ -377,7 +380,6 @@ if ($backup.isPresent){
 			System.Management.Automation.ActionPreferenceStopException) 
 		}
 			
-		#Expand-Archive -Path $bundlefile -OutputPath "$SystemDrive\"
 		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 		-ArgumentList `
 		("x $bundlefile -aoa -x!"+$manifestfile+" -o"+"$SystemDrive\") -wait
