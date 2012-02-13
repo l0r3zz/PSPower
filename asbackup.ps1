@@ -6,8 +6,8 @@
 # =============================================================================
 # Created: [12/26/2011]
 # Author: Geoff White
+# Version: 0.9.20120209 beta
 # Arguments:
-# Version 0.9.20120209 beta
 # Usage: asbackup   -backup [-no-priv-data]|-restore [-silent|-debugrestore]
 #                     <bundle>
 #
@@ -86,7 +86,10 @@ function quiet-services {
 		Write-Host "Asperacentral is not running"
 	}
 }
-
+# *****************************************************************************
+# unquiet-services - undo what was done by quier services
+#
+# *****************************************************************************
 function unquiet-services {
 	# Start asperacentral back up only if it was running before
 	if ($asperaCentralService.status-eq "Running"){
@@ -185,7 +188,7 @@ function Get-Profiles
 ## Exception handlers
 ###########################################
 $OldErrorActionPref = $ErrorActionPreference
-#$ErrorActionPreference = 'Stop'
+#$ErrorActionPreference = 'Stop' # uncomment this for debugging
 
 # This is a catch all trap that catches anything that is caught before,
 # basically make sure the user winds up back at their hime directory
@@ -205,12 +208,7 @@ trap [System.Management.Automation.ActionPreferenceStopException] {
 	}
 
 
-
-# Variables used by both the backup and the restore function
-$manifestfile = ".asmanifest.txt"
-$BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
-              "docroot","group", "preferences.db"
-			  
+		  
 #Find the install directory for the aspera products
 $InstallDir = (Get-ChildItem -Path `
     "Microsoft.PowerShell.Core\Registry::HKEY_CURRENT_USER\Software\Aspera\"`
@@ -238,7 +236,11 @@ $asperaetc = $InstallDir+"etc"
 $asperaetcfiles = $asperaetc + "\*"
 $bundlepath =   "c:\Windows\Temp\"
 $bundlefile = $bundlepath + "$bundle.zip"
-
+# Variables used by both the backup and the restore function
+$manifestfile = ".asmanifest.txt"
+$BackupList = "aspera.conf","passwd","ui.conf","sync-conf.xml",
+              "docroot","group", "preferences.db"
+	
 # OK let's go...		
 
 # Perform Backup Operation				  
@@ -305,29 +307,33 @@ if ($backup.isPresent){
 	# Create a manifest file and add it to  the zip archive
 	New-Item -Force -Name $manifestfile -type "file" `
 	    -Value "aspera_etc=$asperaetc `nbundlepath=$bundlepath" |Out-Null
+		
 	# Add Userdata info for found uers in the passsword file
 	# Ugly hack to keep add-content from appending newline chars :(
 	Add-Content -Path $manifestfile ([Byte[]][Char[]] "`nuser_profile= [")`
 	    -Encoding Byte
+		
 	foreach ($u in $UserProfiles) {
 		Add-Content -Path $manifestfile ([Byte[]][Char[]]`
 		  ("{'username':`'$($u.Username)`','localpath':" +
 		  "`'$($u.ProfileRef.LocalPath)`','sid':`'$($u.ProfileRef.SID)`'},") )`
 		  -Encoding Byte
 		  
-		# Get the list of context files and write them to a zip archive
+		# Write the .ssh dirs of the users found in the password file (if any)
 		$sshdirpath  = ($u.profileRef.localPath + "\.ssh\").substring(3)
 	
 		$templocation = pwd
-		Set-Location "c:\"
+		Set-Location "c:\"  # we do this so we can write full paths that can
+		                    # easily be restored.
 		Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 		    -ArgumentList "a $bundlefile $sshdirpath " -wait -NoNewWindow
-
-		Set-Location $templocation 
-		
+		Set-Location $templocation 		
 	}
+	
+	# Close the array definitio so we have some pseudo-jason in the manifest
 	Add-Content -Path $manifestfile "]"
 
+	# write the manifest file to the archive
 	Start-Process $bk7zippath -RedirectStandardOutput "test.out"`
 	    -ArgumentList "a $bundlefile $manifestfile " -wait
 
@@ -336,7 +342,8 @@ if ($backup.isPresent){
 	
 	# CD back to where you started
     Set-location $homepath |out-null
-	write-host
+	write-host   # Write a line feed
+	# We're done with the backup!
 
 # Perform Restore Operation
 }elseif( $restore.isPresent -or $debugrestore.isPresent){
